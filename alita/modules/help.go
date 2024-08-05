@@ -184,9 +184,11 @@ func (moduleStruct) about(b *gotgbot.Bot, ctx *ext.Context) error {
 		_, _, err := query.Message.EditText(b,
 			currText,
 			&gotgbot.EditMessageTextOpts{
-				ReplyMarkup:           currKb,
-				DisableWebPagePreview: true,
-				ParseMode:             helpers.HTML,
+				ReplyMarkup: currKb,
+				LinkPreviewOptions: &gotgbot.LinkPreviewOptions{
+					IsDisabled: true,
+				},
+				ParseMode: helpers.HTML,
 			},
 		)
 		if err != nil {
@@ -220,9 +222,11 @@ func (moduleStruct) about(b *gotgbot.Bot, ctx *ext.Context) error {
 			b,
 			currText,
 			&gotgbot.SendMessageOpts{
-				ParseMode:             helpers.HTML,
-				DisableWebPagePreview: true,
-				ReplyMarkup:           &currKb,
+				ParseMode: helpers.HTML,
+				LinkPreviewOptions: &gotgbot.LinkPreviewOptions{
+					IsDisabled: true,
+				},
+				ReplyMarkup: &currKb,
 			},
 		)
 		if err != nil {
@@ -240,13 +244,13 @@ func (moduleStruct) helpButtonHandler(b *gotgbot.Bot, ctx *ext.Context) error {
 	module := args[1]
 
 	var (
-		_parsemode, helpText string
-		replyKb              gotgbot.InlineKeyboardMarkup
+		parsemode, helpText string
+		replyKb             gotgbot.InlineKeyboardMarkup
 	)
 
 	// Sort the module names
 	if string_handling.FindInStringSlice([]string{"BackStart", "Help"}, module) {
-		_parsemode = helpers.HTML
+		parsemode = helpers.HTML
 		switch module {
 		case "Help":
 			// This shows the main start menu
@@ -259,7 +263,8 @@ func (moduleStruct) helpButtonHandler(b *gotgbot.Bot, ctx *ext.Context) error {
 		}
 	} else {
 		// For all remainging modules
-		helpText, replyKb, _parsemode = getHelpTextAndMarkup(ctx, strings.ToLower(module))
+		// FIXME: error for pins, purges, reports, rules, warns
+		helpText, replyKb, parsemode = getHelpTextAndMarkup(ctx, strings.ToLower(module))
 	}
 
 	// Edit the main message, the main querymessage
@@ -267,9 +272,11 @@ func (moduleStruct) helpButtonHandler(b *gotgbot.Bot, ctx *ext.Context) error {
 		b,
 		helpText,
 		&gotgbot.EditMessageTextOpts{
-			ParseMode:             _parsemode,
-			ReplyMarkup:           replyKb,
-			DisableWebPagePreview: true,
+			ParseMode:   parsemode,
+			ReplyMarkup: replyKb,
+			LinkPreviewOptions: &gotgbot.LinkPreviewOptions{
+				IsDisabled: true,
+			},
 		},
 	)
 	if err != nil {
@@ -297,9 +304,11 @@ func (moduleStruct) start(b *gotgbot.Bot, ctx *ext.Context) error {
 			_, err := msg.Reply(b,
 				startHelp,
 				&gotgbot.SendMessageOpts{
-					ParseMode:             helpers.HTML,
-					DisableWebPagePreview: true,
-					ReplyMarkup:           &startMarkup,
+					ParseMode: helpers.HTML,
+					LinkPreviewOptions: &gotgbot.LinkPreviewOptions{
+						IsDisabled: true,
+					},
+					ReplyMarkup: &startMarkup,
 				},
 			)
 			if err != nil {
@@ -332,10 +341,14 @@ func (moduleStruct) donate(b *gotgbot.Bot, ctx *ext.Context) error {
 	_, err := b.SendMessage(chat.Id,
 		i18n.I18n{LangCode: "en"}.GetString("strings.Help.DonateText"),
 		&gotgbot.SendMessageOpts{
-			ParseMode:                helpers.HTML,
-			DisableWebPagePreview:    true,
-			ReplyToMessageId:         msg.MessageId,
-			AllowSendingWithoutReply: true,
+			ParseMode: helpers.HTML,
+			LinkPreviewOptions: &gotgbot.LinkPreviewOptions{
+				IsDisabled: true,
+			},
+			ReplyParameters: &gotgbot.ReplyParameters{
+				MessageId:                msg.MessageId,
+				AllowSendingWithoutReply: true,
+			},
 		},
 	)
 	if err != nil {
@@ -350,7 +363,7 @@ func (moduleStruct) botConfig(b *gotgbot.Bot, ctx *ext.Context) error {
 	msg := query.Message
 
 	// just in case
-	if msg.Chat.Type != "private" {
+	if msg.GetChat().Type != "private" {
 		_, _, err := msg.EditText(b, "Configuration only works in private", nil)
 		if err != nil {
 			log.Error(err)
@@ -410,7 +423,9 @@ func (moduleStruct) botConfig(b *gotgbot.Bot, ctx *ext.Context) error {
 		b,
 		text,
 		&gotgbot.EditMessageTextOpts{
-			DisableWebPagePreview: true,
+			LinkPreviewOptions: &gotgbot.LinkPreviewOptions{
+				IsDisabled: true,
+			},
 			ReplyMarkup: gotgbot.InlineKeyboardMarkup{
 				InlineKeyboard: iKeyboard,
 			},
@@ -491,9 +506,11 @@ func (moduleStruct) help(b *gotgbot.Bot, ctx *ext.Context) error {
 		_, err := msg.Reply(b,
 			moduleHelpString,
 			&gotgbot.SendMessageOpts{
-				ParseMode:                helpers.HTML,
-				ReplyToMessageId:         replyMsgId,
-				AllowSendingWithoutReply: true,
+				ParseMode: helpers.HTML,
+				ReplyParameters: &gotgbot.ReplyParameters{
+					MessageId:                replyMsgId,
+					AllowSendingWithoutReply: true,
+				},
 				ReplyMarkup: gotgbot.InlineKeyboardMarkup{
 					InlineKeyboard: [][]gotgbot.InlineKeyboardButton{
 						{

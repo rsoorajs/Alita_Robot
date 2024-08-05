@@ -9,15 +9,19 @@ import (
 )
 
 // LoadAdminCache loads the admin cache for the chat.
-func LoadAdminCache(b *gotgbot.Bot, chat *gotgbot.Chat) AdminCache {
-	adminList, err := chat.GetAdministrators(b, nil)
+func LoadAdminCache(b *gotgbot.Bot, chatId int64) AdminCache {
+	if b == nil {
+		log.Error("LoadAdminCache: bot is nil")
+		return AdminCache{}
+	}
+
+	adminList, err := b.GetChatAdministrators(chatId, nil)
 	if err != nil {
 		log.Error(err)
 		return AdminCache{}
 	}
 
 	var userList []gotgbot.MergedChatMember
-
 	for _, admin := range adminList {
 		userList = append(userList, admin.MergeChatMember())
 	}
@@ -25,10 +29,10 @@ func LoadAdminCache(b *gotgbot.Bot, chat *gotgbot.Chat) AdminCache {
 	err = Marshal.Set(
 		Context,
 		AdminCache{
-			ChatId: chat.Id,
+			ChatId: chatId,
 		},
 		AdminCache{
-			ChatId:   chat.Id,
+			ChatId:   chatId,
 			UserInfo: userList,
 			Cached:   true,
 		},
@@ -39,21 +43,37 @@ func LoadAdminCache(b *gotgbot.Bot, chat *gotgbot.Chat) AdminCache {
 		return AdminCache{}
 	}
 
-	_, newAdminList := GetAdminCacheList(chat.Id)
+	_, newAdminList := GetAdminCacheList(chatId)
 	return newAdminList
 }
 
 // GetAdminCacheList gets the admin cache for the chat.
 func GetAdminCacheList(chatId int64) (bool, AdminCache) {
-	gotAdminlist, _ := Marshal.Get(
+	gotAdminlist, err := Marshal.Get(
 		Context,
 		AdminCache{
 			ChatId: chatId,
 		},
 		new(AdminCache),
 	)
+	if err != nil {
+		log.Error(err)
+		return false, AdminCache{}
+	}
 	if gotAdminlist == nil {
 		return false, AdminCache{}
 	}
 	return true, *gotAdminlist.(*AdminCache)
+}
+
+// GetAdminCacheUser gets the admin cache for the chat.
+func GetAdminCacheUser(chatId, userId int64) (bool, gotgbot.MergedChatMember) {
+	adminList, _ := Marshal.Get(Context, AdminCache{ChatId: chatId}, new(AdminCache))
+	for i := range adminList.(*AdminCache).UserInfo {
+		admin := &adminList.(*AdminCache).UserInfo[i]
+		if admin.User.Id == userId {
+			return true, *admin
+		}
+	}
+	return false, gotgbot.MergedChatMember{}
 }

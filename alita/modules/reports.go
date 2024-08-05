@@ -99,7 +99,7 @@ func (moduleStruct) report(b *gotgbot.Bot, ctx *ext.Context) error {
 
 	adminsAvail, admins := cache.GetAdminCacheList(chat.Id)
 	if !adminsAvail {
-		admins = cache.LoadAdminCache(b, chat)
+		admins = cache.LoadAdminCache(b, chat.Id)
 	}
 
 	for i := range admins.UserInfo {
@@ -146,9 +146,11 @@ func (moduleStruct) report(b *gotgbot.Bot, ctx *ext.Context) error {
 	_, err = msg.Reply(b,
 		reported,
 		&gotgbot.SendMessageOpts{
-			ParseMode:                helpers.HTML,
-			ReplyToMessageId:         replyMsgId,
-			AllowSendingWithoutReply: true,
+			ParseMode: helpers.HTML,
+			ReplyParameters: &gotgbot.ReplyParameters{
+				MessageId:                replyMsgId,
+				AllowSendingWithoutReply: true,
+			},
 			ReplyMarkup: gotgbot.InlineKeyboardMarkup{
 				InlineKeyboard: [][]gotgbot.InlineKeyboardButton{
 					{

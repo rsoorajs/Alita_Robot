@@ -49,7 +49,10 @@ func (moduleStruct) chatInfo(b *gotgbot.Bot, ctx *ext.Context) error {
 			_, _ = msg.Reply(b, err.Error(), nil)
 			return ext.EndGroups
 		}
-		con, _ := chat.GetMemberCount(b, nil)
+		// need to convert chat to group chat to use GetMemberCount
+		_chat := chat.ToChat()
+		gChat := &_chat
+		con, _ := gChat.GetMemberCount(b, nil)
 		replyText = fmt.Sprintf("<b>Name:</b> %s\n<b>Chat ID</b>: %d\n<b>Users Count:</b> %d\n<b>Link:</b> %s", chat.Title, chat.Id, con, chat.InviteLink)
 	}
 
@@ -112,11 +115,13 @@ func (moduleStruct) chatList(b *gotgbot.Bot, ctx *ext.Context) error {
 
 	_, err = b.SendDocument(
 		chat.Id,
-		openedFile,
+		gotgbot.InputFileByReader(fileName, openedFile),
 		&gotgbot.SendDocumentOpts{
-			Caption:                  "Here is the list of chats in my Database!",
-			ReplyToMessageId:         msg.MessageId,
-			AllowSendingWithoutReply: true,
+			Caption: "Here is the list of chats in my Database!",
+			ReplyParameters: &gotgbot.ReplyParameters{
+				MessageId:                msg.MessageId,
+				AllowSendingWithoutReply: true,
+			},
 		},
 	)
 	if err != nil {
