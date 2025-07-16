@@ -1,3 +1,8 @@
+// Package chat_status provides utilities for checking user and bot permissions in Telegram chats.
+//
+// This package contains functions for verifying admin status, bot capabilities,
+// user permissions, and enforcing access control for various bot commands and features.
+// All functions include proper error handling and user feedback mechanisms.
 package chat_status
 
 import (
@@ -12,6 +17,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/divideprojects/Alita_Robot/alita/db"
+	"github.com/divideprojects/Alita_Robot/alita/i18n"
 	"github.com/divideprojects/Alita_Robot/alita/utils/cache"
 	"github.com/divideprojects/Alita_Robot/alita/utils/error_handling"
 	"github.com/divideprojects/Alita_Robot/alita/utils/string_handling"
@@ -30,15 +36,17 @@ var (
 	anonChatMapExpirartion = 20 * time.Second
 )
 
-// safeGetChat safely retrieves chat information from context, handling different update types
+// safeGetChat safely retrieves chat information from context, handling different update types.
+// It checks various update types (callback query, message, chat member) and returns the appropriate chat.
+// Falls back to EffectiveChat if other methods fail.
 func safeGetChat(ctx *ext.Context) *gotgbot.Chat {
 	if ctx.CallbackQuery != nil {
 		_chatValue := ctx.CallbackQuery.Message.GetChat()
 		return &_chatValue
-	} else if ctx.Update.Message != nil {
-		return &ctx.Update.Message.Chat
-	} else if ctx.Update.ChatMember != nil {
-		return &ctx.Update.ChatMember.Chat
+	} else if ctx.Message != nil {
+		return &ctx.Message.Chat
+	} else if ctx.ChatMember != nil {
+		return &ctx.ChatMember.Chat
 	} else {
 		// Fallback to EffectiveChat if available
 		return ctx.EffectiveChat
@@ -190,6 +198,7 @@ func CanUserChangeInfo(b *gotgbot.Bot, ctx *ext.Context, chat *gotgbot.Chat, use
 
 	msg := ctx.EffectiveMessage
 	sender := ctx.EffectiveSender
+	tr := i18n.I18n{LangCode: db.GetLanguage(ctx)}
 	var userMember gotgbot.MergedChatMember
 
 	if db.GetAdminSettings(chat.Id).AnonAdmin && sender.IsAnonymousAdmin() {
@@ -214,7 +223,7 @@ func CanUserChangeInfo(b *gotgbot.Bot, ctx *ext.Context, chat *gotgbot.Chat, use
 	}
 
 	if !userMember.CanChangeInfo && userMember.Status != "creator" {
-		query := ctx.Update.CallbackQuery
+		query := ctx.CallbackQuery
 		if query != nil {
 			if !justCheck {
 				_, err := query.Answer(b, &gotgbot.AnswerCallbackQueryOpts{Text: "You don't have permissions to change info!!"})
@@ -226,7 +235,7 @@ func CanUserChangeInfo(b *gotgbot.Bot, ctx *ext.Context, chat *gotgbot.Chat, use
 			return false
 		}
 		if !justCheck {
-			_, err := b.SendMessage(chat.Id, "You don't have permission to change info in this group!",
+			_, err := b.SendMessage(chat.Id, tr.GetString("strings.utils.chat_status.user.no_permission_change_info_cmd"),
 				&gotgbot.SendMessageOpts{
 					ReplyParameters: &gotgbot.ReplyParameters{
 						MessageId:                ctx.EffectiveMessage.MessageId,
@@ -277,7 +286,7 @@ func CanUserRestrict(b *gotgbot.Bot, ctx *ext.Context, chat *gotgbot.Chat, userI
 		error_handling.HandleErr(err)
 	}
 	if !userMember.CanRestrictMembers && userMember.Status != "creator" {
-		query := ctx.Update.CallbackQuery
+		query := ctx.CallbackQuery
 		if query != nil {
 			if !justCheck {
 				_, err := query.Answer(b, &gotgbot.AnswerCallbackQueryOpts{Text: "You don't have permissions to restrict members!!"})
@@ -318,7 +327,7 @@ func CanBotRestrict(b *gotgbot.Bot, ctx *ext.Context, chat *gotgbot.Chat, justCh
 	botMember, err := chat.GetMember(b, b.Id, nil)
 	error_handling.HandleErr(err)
 	if !botMember.MergeChatMember().CanRestrictMembers {
-		query := ctx.Update.CallbackQuery
+		query := ctx.CallbackQuery
 		if query != nil {
 			if !justCheck {
 				_, err := query.Answer(b, &gotgbot.AnswerCallbackQueryOpts{Text: "I don't have permissions to restrict members!!"})
@@ -381,7 +390,7 @@ func CanUserPromote(b *gotgbot.Bot, ctx *ext.Context, chat *gotgbot.Chat, userId
 		error_handling.HandleErr(err)
 	}
 	if !userMember.CanPromoteMembers && userMember.Status != "creator" {
-		query := ctx.Update.CallbackQuery
+		query := ctx.CallbackQuery
 		if query != nil {
 			if !justCheck {
 				_, err := query.Answer(b, &gotgbot.AnswerCallbackQueryOpts{Text: "You don't have permissions to promote/demote members!!"})
@@ -624,7 +633,7 @@ func CanUserDelete(b *gotgbot.Bot, ctx *ext.Context, chat *gotgbot.Chat, userId 
 	}
 
 	if !userMember.CanDeleteMessages && userMember.Status != "creator" {
-		query := ctx.Update.CallbackQuery
+		query := ctx.CallbackQuery
 		if query != nil {
 			if !justCheck {
 				_, err := query.Answer(b, &gotgbot.AnswerCallbackQueryOpts{Text: "You don't have permissions to delete messages!!"})
@@ -746,7 +755,7 @@ func RequireUserAdmin(b *gotgbot.Bot, ctx *ext.Context, chat *gotgbot.Chat, user
 
 	msg := ctx.EffectiveMessage
 	if !IsUserAdmin(b, chat.Id, userId) {
-		query := ctx.Update.CallbackQuery
+		query := ctx.CallbackQuery
 		if query != nil {
 			if !justCheck {
 				_, err := query.Answer(b, &gotgbot.AnswerCallbackQueryOpts{Text: "You need to be an admin to do this!"})
@@ -785,7 +794,7 @@ func RequireUserOwner(b *gotgbot.Bot, ctx *ext.Context, chat *gotgbot.Chat, user
 	}
 
 	if mem.GetStatus() != "creator" {
-		query := ctx.Update.CallbackQuery
+		query := ctx.CallbackQuery
 		if query != nil {
 			if !justCheck {
 				_, err := query.Answer(b, &gotgbot.AnswerCallbackQueryOpts{Text: "You need to be the group creator to do this!"})
@@ -866,5 +875,7 @@ setAnonAdminCache stores the anonymous admin message in the cache for a limited 
 Used to track anonymous admin actions for verification purposes.
 */
 func setAnonAdminCache(chatId int64, msg *gotgbot.Message) {
-	cache.Marshal.Set(cache.Context, fmt.Sprintf("anonAdmin.%d.%d", chatId, msg.MessageId), msg, store.WithExpiration(anonChatMapExpirartion))
+	if err := cache.Marshal.Set(cache.Context, fmt.Sprintf("anonAdmin.%d.%d", chatId, msg.MessageId), msg, store.WithExpiration(anonChatMapExpirartion)); err != nil {
+		log.Error("Failed to set anonymous admin cache:", err)
+	}
 }

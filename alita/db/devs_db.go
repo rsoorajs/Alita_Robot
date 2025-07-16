@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"fmt"
 	"runtime"
 
@@ -28,8 +29,13 @@ func GetTeamMembers() map[int64]string {
 	var teamArray []*Team
 	array := make(map[int64]string)
 	cursor := findAll(devsColl, bson.M{})
-	defer cursor.Close(bgCtx)
-	err := cursor.All(bgCtx, &teamArray)
+	ctx := context.Background()
+	defer func() {
+		if err := cursor.Close(ctx); err != nil {
+			log.Error("Failed to close devs cursor:", err)
+		}
+	}()
+	err := cursor.All(ctx, &teamArray)
 	if err != nil {
 		log.Error(err)
 		return nil
@@ -84,6 +90,7 @@ func LoadAllStats() string {
 	enabledWelcome, enabledGoodbye, cleanServiceEnabled, cleanWelcomeEnabled, cleanGoodbyeEnabled := LoadGreetingsStats()
 	notesNum, notesChats := LoadNotesStats()
 	numChannels := LoadChannelStats()
+	enabledCaptcha, kickEnabled, rulesEnabled, activeChallenges := LoadCaptchaStats()
 
 	result := "<u>Alita's Stats:</u>" +
 		fmt.Sprintf("\n\nGo Version: %s", runtime.Version()) +
@@ -136,6 +143,11 @@ func LoadAllStats() string {
 			humanize.Comma(notesNum),
 			humanize.Comma(notesChats),
 		) +
+		"\n<b>CAPTCHA:</b>" +
+		fmt.Sprintf("\n    <b>Enabled:</b> %s", humanize.Comma(enabledCaptcha)) +
+		fmt.Sprintf("\n    <b>Kick Enabled:</b> %s", humanize.Comma(kickEnabled)) +
+		fmt.Sprintf("\n    <b>Rules Enabled:</b> %s", humanize.Comma(rulesEnabled)) +
+		fmt.Sprintf("\n    <b>Active Challenges:</b> %s", humanize.Comma(activeChallenges)) +
 		fmt.Sprintf("\n<b>Channels Stored</b>: %s", humanize.Comma(numChannels))
 
 	return result

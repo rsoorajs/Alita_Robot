@@ -251,7 +251,7 @@ func (moduleStruct) notesList(b *gotgbot.Bot, ctx *ext.Context) error {
 
 	// if user uses the /note command in private chat
 	// No matter if privRules are set or not
-	if ctx.Update.Message.Chat.Type == "private" {
+	if ctx.Message.Chat.Type == "private" {
 		// check if want admin notes or not
 		admin := chat_status.IsUserAdmin(b, chat.Id, user.Id)
 		noteKeys := db.GetNotesList(chat.Id, admin)
@@ -360,7 +360,7 @@ func (moduleStruct) rmAllNotes(b *gotgbot.Bot, ctx *ext.Context) error {
 
 // CallbackQuery handler for notes_overwite. query
 func (m moduleStruct) noteOverWriteHandler(b *gotgbot.Bot, ctx *ext.Context) error {
-	query := ctx.Update.CallbackQuery
+	query := ctx.CallbackQuery
 	user := query.From
 
 	// permission checks
@@ -413,7 +413,7 @@ func (m moduleStruct) noteOverWriteHandler(b *gotgbot.Bot, ctx *ext.Context) err
 }
 
 func (moduleStruct) notesButtonHandler(b *gotgbot.Bot, ctx *ext.Context) error {
-	query := ctx.Update.CallbackQuery
+	query := ctx.CallbackQuery
 	user := query.From
 
 	// permission checks
@@ -517,7 +517,7 @@ func (m moduleStruct) notesWatcher(b *gotgbot.Bot, ctx *ext.Context) error {
 
 		// send private note if private notes is enabled or note is private, and it is not group note
 		if privateNoteOnly {
-			if ctx.Update.Message.Chat.Type == "private" {
+			if ctx.Message.Chat.Type == "private" {
 				_, err = helpers.SendNote(b, chat, ctx, noteData, replyMsgId)
 			} else {
 				_, err = msg.Reply(b,
@@ -701,6 +701,39 @@ func (moduleStruct) sendNoFormatNote(b *gotgbot.Bot, ctx *ext.Context, replyMsgI
 	return nil
 }
 
+// LoadNotes registers all note-related command handlers with the dispatcher.
+//
+// This function enables the notes module and adds handlers for note management
+// and retrieval. The module provides a system for storing and retrieving
+// custom messages, media, and formatted responses.
+//
+// Registered commands:
+//   - /get: Retrieves a saved note by name
+//   - /save: Saves a new note with optional media and buttons
+//   - /saved, /notes: Lists all saved notes in the chat
+//   - /clear: Removes a saved note
+//   - /clearall: Removes all notes from the chat
+//   - /privatenotes: Toggles private note delivery mode
+//   - /notemode: Sets note delivery mode (reply/private)
+//
+// The module automatically processes hashtag triggers (#notename) in messages
+// and responds with the corresponding saved note content.
+//
+// Features:
+//   - Rich content support (text, media, buttons)
+//   - Hashtag trigger system for quick note access
+//   - Private and public note delivery modes
+//   - Note statistics and management
+//   - Bulk note operations
+//   - Integration with formatting system
+//
+// Requirements:
+//   - User must be admin to save/delete notes
+//   - Module supports remote configuration via connections
+//   - Integrates with formatting module for rich content
+//
+// The notes system provides an efficient way to store and share
+// frequently used information with automatic trigger recognition.
 func LoadNotes(dispatcher *ext.Dispatcher) {
 	HelpModule.AbleMap.Store(notesModule.moduleName, true)
 

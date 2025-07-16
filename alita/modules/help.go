@@ -19,11 +19,9 @@ import (
 	"github.com/divideprojects/Alita_Robot/alita/utils/string_handling"
 )
 
-/*
-HelpModule provides logic for the bot's help and about system.
-
-Implements commands and handlers for help menus, about info, configuration, and donation instructions.
-*/
+// HelpModule provides logic for the bot's help and about system.
+//
+// Implements commands and handlers for help menus, about info, configuration, and donation instructions.
 var HelpModule = moduleStruct{
 	moduleName:     "Help",
 	AbleMap:        moduleEnabled{},
@@ -127,42 +125,32 @@ var (
 	}
 )
 
-/*
-moduleEnabled tracks which modules are enabled for help and configuration.
-
-Used internally by the help system.
-*/
+// moduleEnabled tracks which modules are enabled for help and configuration.
+//
+// Used internally by the help system.
 type moduleEnabled struct {
 	modules map[string]bool
 }
 
-/*
-Init initializes the moduleEnabled map.
-*/
+// Init initializes the moduleEnabled map.
 func (m *moduleEnabled) Init() {
 	m.modules = make(map[string]bool)
 }
 
-/*
-Store sets the enabled state for a module.
-*/
+// Store sets the enabled state for a module.
 func (m *moduleEnabled) Store(module string, enabled bool) {
 	m.modules[module] = enabled
 }
 
-/*
-Load retrieves the enabled state for a module.
-
-Returns the module name and whether it is enabled.
-*/
+// Load retrieves the enabled state for a module.
+//
+// Returns the module name and whether it is enabled.
 func (m *moduleEnabled) Load(module string) (string, bool) {
 	log.Info(fmt.Sprintf("[Module] Loading %s module", module))
 	return module, m.modules[module]
 }
 
-/*
-LoadModules returns a list of all enabled module names.
-*/
+// LoadModules returns a list of all enabled module names.
 func (m *moduleEnabled) LoadModules() []string {
 	modules := make([]string, 0)
 	for module := range m.modules {
@@ -174,11 +162,9 @@ func (m *moduleEnabled) LoadModules() []string {
 	return modules
 }
 
-/*
-about displays information about the bot, including FAQs and about text.
-
-Handles both command and callback query contexts.
-*/
+// about displays information about the bot, including FAQs and about text.
+//
+// Handles both command and callback query contexts.
 func (moduleStruct) about(b *gotgbot.Bot, ctx *ext.Context) error {
 	msg := ctx.EffectiveMessage
 
@@ -198,7 +184,7 @@ func (moduleStruct) about(b *gotgbot.Bot, ctx *ext.Context) error {
 			currText = aboutText
 			currKb = aboutKb
 		case "me":
-			currText = fmt.Sprintf(tr.GetString("strings.Help.About"), b.Username, config.BotVersion)
+			currText = fmt.Sprintf(tr.GetString("strings.help.about"), b.Username, config.BotVersion)
 			currKb = gotgbot.InlineKeyboardMarkup{
 				InlineKeyboard: [][]gotgbot.InlineKeyboardButton{
 					{
@@ -231,7 +217,7 @@ func (moduleStruct) about(b *gotgbot.Bot, ctx *ext.Context) error {
 			return err
 		}
 	} else {
-		if ctx.Update.Message.Chat.Type == "private" {
+		if ctx.Message.Chat.Type == "private" {
 			currText = aboutText
 			currKb = aboutKb
 		} else {
@@ -267,13 +253,11 @@ func (moduleStruct) about(b *gotgbot.Bot, ctx *ext.Context) error {
 	return ext.EndGroups
 }
 
-/*
-helpButtonHandler handles callback queries for the help menu.
-
-Displays help text and navigation for modules and main help options.
-*/
+// helpButtonHandler handles callback queries for the help menu.
+//
+// Displays help text and navigation for modules and main help options.
 func (moduleStruct) helpButtonHandler(b *gotgbot.Bot, ctx *ext.Context) error {
-	query := ctx.Update.CallbackQuery
+	query := ctx.CallbackQuery
 	args := strings.Split(query.Data, ".")
 	module := args[1]
 
@@ -328,17 +312,15 @@ func (moduleStruct) helpButtonHandler(b *gotgbot.Bot, ctx *ext.Context) error {
 }
 
 // start introduces the bot
-/*
-start introduces the bot and handles /start commands.
-
-Displays the main help menu or processes special start arguments for help, connection, rules, or notes.
-*/
+// start introduces the bot and handles /start commands.
+//
+// Displays the main help menu or processes special start arguments for help, connection, rules, or notes.
 func (moduleStruct) start(b *gotgbot.Bot, ctx *ext.Context) error {
 	user := ctx.EffectiveSender.User
 	msg := ctx.EffectiveMessage
 	args := ctx.Args()
 
-	if ctx.Update.Message.Chat.Type == "private" {
+	if ctx.Message.Chat.Type == "private" {
 		if len(args) == 1 {
 			_, err := msg.Reply(b,
 				startHelp,
@@ -373,15 +355,13 @@ func (moduleStruct) start(b *gotgbot.Bot, ctx *ext.Context) error {
 	return ext.EndGroups
 }
 
-/*
-donate displays information on how to support the bot and its creator.
-*/
+// donate displays information on how to support the bot and its creator.
 func (moduleStruct) donate(b *gotgbot.Bot, ctx *ext.Context) error {
 	msg := ctx.EffectiveMessage
 	chat := ctx.EffectiveChat
 
 	_, err := b.SendMessage(chat.Id,
-		i18n.I18n{LangCode: "en"}.GetString("strings.Help.DonateText"),
+		i18n.I18n{LangCode: "en"}.GetString("strings.help.donatetext"),
 		&gotgbot.SendMessageOpts{
 			ParseMode: helpers.HTML,
 			LinkPreviewOptions: &gotgbot.LinkPreviewOptions{
@@ -400,11 +380,9 @@ func (moduleStruct) donate(b *gotgbot.Bot, ctx *ext.Context) error {
 	return ext.EndGroups
 }
 
-/*
-botConfig handles the interactive configuration menu for the bot.
-
-Only works in private chat. Guides users through configuration steps.
-*/
+// botConfig handles the interactive configuration menu for the bot.
+//
+// Only works in private chat. Guides users through configuration steps.
 func (moduleStruct) botConfig(b *gotgbot.Bot, ctx *ext.Context) error {
 	query := ctx.CallbackQuery
 	msg := query.Message
@@ -444,7 +422,7 @@ func (moduleStruct) botConfig(b *gotgbot.Bot, ctx *ext.Context) error {
 				},
 			},
 		}
-		text = tr.GetString("strings.Help.Configuration.Step-1")
+		text = tr.GetString("strings.help.configuration.step-1")
 	case "step2":
 		iKeyboard = [][]gotgbot.InlineKeyboardButton{
 			{
@@ -454,7 +432,7 @@ func (moduleStruct) botConfig(b *gotgbot.Bot, ctx *ext.Context) error {
 				},
 			},
 		}
-		text = fmt.Sprintf(tr.GetString("strings.Help.Configuration.Step-2"), b.Username)
+		text = fmt.Sprintf(tr.GetString("strings.help.configuration.step-2"), b.Username)
 	case "step3":
 		iKeyboard = [][]gotgbot.InlineKeyboardButton{
 			{
@@ -464,7 +442,7 @@ func (moduleStruct) botConfig(b *gotgbot.Bot, ctx *ext.Context) error {
 				},
 			},
 		}
-		text = tr.GetString("strings.Help.Configuration.Step-3")
+		text = tr.GetString("strings.help.configuration.step-3")
 	}
 	_, _, err := msg.EditText(
 		b,
@@ -492,17 +470,15 @@ func (moduleStruct) botConfig(b *gotgbot.Bot, ctx *ext.Context) error {
 	return ext.EndGroups
 }
 
-/*
-help displays the help menu or module-specific help.
-
-Handles both private and group chat contexts, and provides navigation to module help or PM help links.
-*/
+// help displays the help menu or module-specific help.
+//
+// Handles both private and group chat contexts, and provides navigation to module help or PM help links.
 func (moduleStruct) help(b *gotgbot.Bot, ctx *ext.Context) error {
 	chat := ctx.EffectiveChat
 	msg := ctx.EffectiveMessage
 	args := ctx.Args()
 
-	if ctx.Update.Message.Chat.Type == "private" {
+	if ctx.Message.Chat.Type == "private" {
 		if len(args) == 1 {
 			_, err := b.SendMessage(chat.Id,
 				fmt.Sprintf(
@@ -580,11 +556,9 @@ func (moduleStruct) help(b *gotgbot.Bot, ctx *ext.Context) error {
 	return ext.EndGroups
 }
 
-/*
-LoadHelp registers all help-related command handlers with the dispatcher.
-
-Enables the help module and adds handlers for help, about, configuration, and donation commands.
-*/
+// LoadHelp registers all help-related command handlers with the dispatcher.
+//
+// Enables the help module and adds handlers for help, about, configuration, and donation commands.
 func LoadHelp(dispatcher *ext.Dispatcher) {
 	dispatcher.AddHandler(handlers.NewCommand("start", HelpModule.start))
 	dispatcher.AddHandler(handlers.NewCommand("help", HelpModule.help))
